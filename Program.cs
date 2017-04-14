@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Security.Cryptography;
@@ -39,30 +40,20 @@ namespace T2Auth
 
             // OK so decrypted = encrypted ^ exponent mod modulus ..?
             // var exponent = int.Parse(e);
-            // var bigExponent = BigInteger.Parse(AuthServerPublicExponentStr);
-            // var bigModulus = new BigInteger(HexStringToByteArray(AuthServerPublicModulusStr));
+            var bigExponent = BigInteger.Parse(AuthServerPublicExponentStr);
+            var bigModulus = new BigInteger(HexStringToByteArray(AuthServerPublicModulusStr).Reverse().Concat(new byte[] { 0 }).ToArray());
             // var bigSignature = new BigInteger(HexStringToByteArray(sig));
             // var bigDecrypted = BigInteger.ModPow(bigSignature, bigExponent, bigModulus);
             // var bigDecryptedBytes = bigDecrypted.ToByteArray();
-            // //var decryptedBytes = rsaOperation(HexStringToByteArray(sig), bigExponent, bigModulus);
+            var decryptedBytes = rsaOperation(HexStringToByteArray(sig), bigExponent, bigModulus);
             // var decryptedAscii = Encoding.ASCII.GetString(bigDecryptedBytes);
             // var decryptedUtf = Encoding.UTF8.GetString(bigDecryptedBytes);
             // var decryptedUnicode = Encoding.Unicode.GetString(bigDecryptedBytes);
-
+            Console.WriteLine($"Exponent: {bigExponent}");
+            Console.WriteLine($"Modulus: {bigModulus}");
             // Console.WriteLine($"RAW VALUES: (Count {bigDecryptedBytes.Length})\n{string.Join(", ", bigDecryptedBytes.Select(x => (int)x))}");
-
-            // Decrypt SHA1 sum
-            var rsa = RSA.Create();
-            var rsaParams = new RSAParameters(); // Export params
-            rsaParams.Exponent = new byte[] { (byte)int.Parse(AuthServerPublicExponentStr) }; // Set public key props
-            rsaParams.Modulus = HexStringToByteArray(AuthServerPublicModulusStr);
-            Console.WriteLine($"Exponent bytes: {rsaParams.Exponent.Length}\nModulus bytes: {rsaParams.Modulus.Length}");
-            rsa.ImportParameters(rsaParams); // Import params
-            var decryptedSig = rsa.Decrypt(HexStringToByteArray(sig), RSAEncryptionPadding.OaepSHA1); // Decrypt the signature segment
-            var decryptedSigStr = Encoding.UTF8.GetString(decryptedSig);
-            Console.WriteLine($"RAW VALUES: (Count {decryptedSig.Length})\n{string.Join(", ", decryptedSig.Select(x => (int)x))}");
-            Console.WriteLine($"String: {decryptedSigStr}");
-            //Console.WriteLine($"DECRYPTED VALUES\nASCII: {decryptedAscii}\nUTF8: {decryptedSigStr}\nUnicode: {decryptedUnicode}");
+            Console.WriteLine($"Raw values: {string.Join(", ", decryptedBytes.Select(b => (int)b))}");
+            Console.WriteLine($"Hex string: {ByteArrayToHexString(decryptedBytes)}");
         }
 
         public static byte[] HexStringToByteArray(string hex) {
@@ -70,6 +61,16 @@ namespace T2Auth
                 .Range(0, hex.Length / 2)
                 .Select(x => Convert.ToByte(hex.Substring(x * 2, 2), 16))
                 .ToArray();
+        }
+
+        public static string ByteArrayToHexString(byte[] ba)
+        {
+            StringBuilder hex = new StringBuilder(ba.Length * 2);
+            foreach (byte b in ba)
+            {
+                hex.AppendFormat("{0:x2}", b);
+            }
+            return hex.ToString();
         }
 
         private static byte[] rsaOperation(byte[] data, BigInteger exp, BigInteger mod)
